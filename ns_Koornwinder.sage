@@ -1056,7 +1056,8 @@ def _get_Y_wt(KPR, wt, mu = None):
     """
     n = len(wt)-1
     if mu is None:
-        mu = KoornwinderBoxDiagram(n*[0])
+        mu = n*[0]
+    mu = KoornwinderBoxDiagram(mu)
     v_mu = mu.v_mu()
     scalars = KPR.base_ring().gens()
     sqrt_q = scalars[0]
@@ -1068,11 +1069,13 @@ def _get_Y_wt(KPR, wt, mu = None):
         KPR.one()
         q_front = sqrt_q^(-2*mu[i])
         t_front = sqrt_t^(-2*v_mu[i])
-        inner_term = (sqrt_t0 * sqrt_tn * sqrt_t^(2*n))^(1)
+        if v_mu[i] >= 0:
+            inner_term = (sqrt_t0 * sqrt_tn * sqrt_t^(2*n))^(+1)
+        else:
+            inner_term = (sqrt_t0 * sqrt_tn * sqrt_t^(2*n))^(-1)
         Yi_val = q_front * t_front * inner_term
         Y_wt *= Yi_val^(wt[i])
     Y_wt *= sqrt_q^(-2*wt[-1])
-    #print(f"Y_{wt} evaluates to {Y_wt}")
     return(KPR(Y_wt))
 
 def C_eval(wt, mu = None):
@@ -1086,11 +1089,10 @@ def C_eval(wt, mu = None):
         mu = KoornwinderBoxDiagram(n*[0])
     KPR = KoornwinderPolynomialRing(n)
     (sq_t_alpha, sq_u_alpha) = _get_tu_params(KPR, wt)
-    Y_wt = _get_Y_wt(KPR, [-x for x in wt], mu)
-    num1 = (1 - sq_t_alpha * sq_u_alpha * Y_wt)
-    num2 = (1 + sq_t_alpha * sq_u_alpha^(-1) * Y_wt)
-    denom = (1 - Y_wt^(2))
-    #print(f"{sq_t_alpha^(-1)} * ({num1}) * ({num2}) / ({denom})")
+    Y_wt = _get_Y_wt(KPR, wt, mu)
+    num1 = (1 - sq_t_alpha * sq_u_alpha * Y_wt^(-1))
+    num2 = (1 + sq_t_alpha * sq_u_alpha^(-1) * Y_wt^(-1))
+    denom = (1 - Y_wt^(-2))
     return( sq_t_alpha^(-1) * num1 * num2 / denom)
 
 def Fplus_eval(wt, mu = None):
@@ -1103,7 +1105,7 @@ def Fplus_eval(wt, mu = None):
         mu = KoornwinderBoxDiagram(n*[0])
     KPR = KoornwinderPolynomialRing(n)
     (sq_t_alpha, sq_u_alpha) = _get_tu_params(KPR, wt)
-    return( C_eval(wt, mu) - sq_t_alpha^(+1) )
+    return( sq_t_alpha^(-1) - C_eval(wt, [-x for x in mu]) )
 
 def Fminus_eval(wt, mu = None):
     r"""
@@ -1115,7 +1117,7 @@ def Fminus_eval(wt, mu = None):
         mu = KoornwinderBoxDiagram(n*[0])
     KPR = KoornwinderPolynomialRing(n)
     (sq_t_alpha, sq_u_alpha) = _get_tu_params(KPR, wt)
-    return( C_eval(wt, mu) - sq_t_alpha^(-1) )
+    return( sq_t_alpha^(+1) - C_eval(wt, [-x for x in mu]) )
 
 
 class CF_function_space_element(CombinatorialFreeModule.Element):
