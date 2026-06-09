@@ -1261,7 +1261,7 @@ class CF_function_space_element(CombinatorialFreeModule.Element):
         coeff_1 = self.parent().B(coeff_1_exponent)
         xv = self.parent().xvars()
         tn = self.parent().tn()
-        un = self.parent().u0()
+        un = self.parent().un()
         coeff_2 = -tn^(-1/2)*(1 - tn^(1/2)*un^(1/2)*xv[-1])*(1 + tn^(1/2)*un^(-1/2)*xv[-1])
         return(coeff_1 * self + coeff_2 * self.divided_difference(self.parent().n()))
 
