@@ -1105,7 +1105,7 @@ def Fplus_eval(wt, mu = None):
         mu = KoornwinderBoxDiagram(n*[0])
     KPR = KoornwinderPolynomialRing(n)
     (sq_t_alpha, sq_u_alpha) = _get_tu_params(KPR, wt)
-    return( sq_t_alpha^(-1) - C_eval(wt, [-x for x in mu]) )
+    return( sq_t_alpha^(-1) - C_eval([-x for x in wt], mu) )
 
 def Fminus_eval(wt, mu = None):
     r"""
@@ -1117,7 +1117,7 @@ def Fminus_eval(wt, mu = None):
         mu = KoornwinderBoxDiagram(n*[0])
     KPR = KoornwinderPolynomialRing(n)
     (sq_t_alpha, sq_u_alpha) = _get_tu_params(KPR, wt)
-    return( sq_t_alpha^(+1) - C_eval(wt, [-x for x in mu]) )
+    return( sq_t_alpha^(+1) - C_eval([-x for x in wt], mu) )
 
 
 class CF_function_space_element(CombinatorialFreeModule.Element):
@@ -1260,9 +1260,9 @@ class CF_function_space_element(CombinatorialFreeModule.Element):
             coeff_1_exponent = coeff_1_exponent.Weyl_action(i)
         coeff_1 = self.parent().B(coeff_1_exponent)
         xv = self.parent().xvars()
-        tn = self.parent().t0()
+        tn = self.parent().tn()
         un = self.parent().u0()
-        coeff_2 = -tn^(-1/2)*(1 - tn^(1/2)*un^(1/2)*xv[-1])*(1 - tn^(1/2)*un^(-1/2)*xv[-1])
+        coeff_2 = -tn^(-1/2)*(1 - tn^(1/2)*un^(1/2)*xv[-1])*(1 + tn^(1/2)*un^(-1/2)*xv[-1])
         return(coeff_1 * self + coeff_2 * self.divided_difference(self.parent().n()))
 
     def _tau_i_helper(self, mu, i):
@@ -1400,22 +1400,16 @@ def AlcoveWalkBoxWeight(AWT, r, c):
                 elif z_bi[0] < 0:
                     key = "F+"
             elif step == n:
-                if z_bi[n-1] > 0:
+                if z_bi[n-1] < 0:
                    key = "F-"
-                elif z_bi[n-1] < 0:
+                elif z_bi[n-1] > 0:
                     key = "F+"
             else:
-                z_bi_i = z_bi[step-1]
-                z_bi_ip = z_bi[step]
-                if 0 < z_bi_i and z_bi_i < z_bi_ip: 
-                    key = "F+"
-                elif 0 < z_bi_i and z_bi_i > z_bi_ip:
+                z_bi_i = (lambda x : 2*n+1 + x if x < 0 else x)(z_bi[step-1])
+                z_bi_ip = (lambda x : 2*n+1 + x if x < 0 else x)(z_bi[step])
+                if z_bi_i > z_bi_ip:
                     key = "F-"
-                elif z_bi_i < 0 and 0 < z_bi_ip:
-                    key = "F-"
-                elif z_bi_i < 0 and z_bi_i > z_bi_ip:
-                    key = "F-"
-                elif z_bi_ip < 0 and z_bi_i < z_bi_ip:
+                else:
                     key = "F+"
             CF_exponent += Indices._element_constructor_({root_seq[i] : {key : 1}})
     return(CF_Ring.monomial(CF_exponent) * prod([CF_Ring.xvars()[i] ** x_exponent[i] for i in range(n)]))
@@ -1524,9 +1518,7 @@ def KoornwinderCreation(mu):
 
 def _KoornwinderCreation_helper(mu):
     r"""
-    Uses recursive calls to the the creation formula functions, including
-    - 
-    - 
+    Uses recursive calls to the the creation formula functions
     to compute the un-normaled Koornwinder polynomial \hat{E}_mu.
     """
     mu = KoornwinderBoxDiagram(mu)
