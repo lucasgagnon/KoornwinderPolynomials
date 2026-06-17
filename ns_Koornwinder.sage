@@ -254,30 +254,6 @@ class KoornwinderBoxDiagram(ClonableList):
         Returns a list of the boxes attacking (r, c).
 
         EXAMPLES:: 
-        sage: D = KoornwinderBoxDiagram([-3, 5, -1, 4])
-        sage: D.pretty_print_boxes()
-         _ _ _            
-        |_|_|_|0|_ _ _ _ _  
-             _|1|_|_|_|_|_| 
-            |_|2|_ _ _ _    
-              |3|_|_|_|_|   
-        sage: D.attacking_boxes(1, 2)
-        [(0, -1), (2, -1), (3, 1)]
-        sage: D.attacking_boxes(1, 3)
-        [(0, -2), (3, 2)]
-
-        sage: D = KoornwinderBoxDiagram([0, 2, 3, -1, 1])
-        sage: D.pretty_print_boxes()
-          |0|_ _    
-          |1|_|_|_  
-         _|2|_|_|_| 
-        |_|3|_      
-          |4|_|    
-
-        sage: D.attacking_boxes(2, 1)
-        [(1, 1)]
-        sage: D.attacking_boxes(3, -1)
-        [(4, 1), (2, 1), (1, 1)]
         """
         self._check_box_call(r, c)
         r_val = self.__getitem__(r)
@@ -309,8 +285,8 @@ class KoornwinderBoxDiagram(ClonableList):
             for i in range(self.__len__()):
                 i_val = self.__getitem__(i)
                 if i_val == 0:
-                    if c == -1:
-                        opp_side.append( (i, 1+c) )
+                    if c == -1 and i < r:
+                        prev_col.append( (i, 1+c) )
                     else:
                         continue
                 elif i_val > 0:
@@ -363,33 +339,9 @@ class KoornwinderBoxDiagram(ClonableList):
         returns the portion of the box greedy reduced word coming from box (r, c)
 
         EXAMPLES:: 
-        sage: D = KoornwinderBoxDiagram([-3, 5, -1, 4])
-        sage: D.pretty_print_boxes()
-         _ _ _            
-        |_|_|_|0|_ _ _ _ _  
-             _|1|_|_|_|_|_| 
-            |_|2|_ _ _ _    
-              |3|_|_|_|_|   
-        sage: D.bgrw_filling(1, 2)
-        [4, 3, 2, 1, 0]
-        sage: D.bgrw_filling(1, 3)
-        [3, 4, 3, 2, 1, 0]
-
-        sage: D = KoornwinderBoxDiagram([0, 2, 3, -1, 1])
-        sage: D.pretty_print_boxes()
-          |0|_ _    
-          |1|_|_|_  
-         _|2|_|_|_| 
-        |_|3|_      
-          |4|_|    
-
-        sage: D.bgrw_filling(2, 1)
-        [2, 1, 0]
-        sage: D.bgrw_filling(3, -1)
-        [5, 4, 3, 2, 1, 0]
         """
         self._check_box_call(r, c)
-        if abs(c) == 1:
+        if c == 1:
             if c > 0:
                 return([s for s in range(r, -1, -1)])
             elif c < 0:
@@ -404,29 +356,6 @@ class KoornwinderBoxDiagram(ClonableList):
         returns box greedy reduced word for self as list
 
         EXAMPLES:: 
-        sage: D = KoornwinderBoxDiagram([-3, 5, -1, 4])
-        sage: D.pretty_print_boxes()
-         _ _ _            
-        |_|_|_|0|_ _ _ _ _  
-             _|1|_|_|_|_|_| 
-            |_|2|_ _ _ _    
-              |3|_|_|_|_|   
-        sage: D.box_greedy_reduced_word()
-        [1, 0, 3, 2, 1, 0, 4, 3, 2, 1, 0, 4, 3, 2, 1, 0, 4, 3, 2, 1, 0, 4, 3, 2, 1, 0, 3, 4, 3, 
-        2, 1, 0, 3, 4, 3, 2, 1, 0, 3, 4, 3, 2, 1, 0, 3, 4, 3, 2, 1, 0, 3, 4, 3, 2, 1, 0, 3, 4, 3, 
-        2, 1, 0, 2, 3, 4, 3, 2, 1, 0]
-
-        sage: D = KoornwinderBoxDiagram([0, 2, 3, -1, 1])
-        sage: D.pretty_print_boxes()
-          |0|_ _    
-          |1|_|_|_  
-         _|2|_|_|_| 
-        |_|3|_      
-          |4|_|    
-
-        sage: D.box_greedy_reduced_word()
-        [1, 0, 2, 1, 0, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1, 0, 4, 5, 4, 3, 2, 1, 0, 4, 5, 4, 3, 2, 1, 0, 
-        1, 2, 3, 4, 5, 4, 3, 2, 1, 0]
         """
         return(list(itertools.chain.from_iterable([self.bgrw_filling(r, c) for (r, c) in self.boxes()])))
 
@@ -435,34 +364,6 @@ class KoornwinderBoxDiagram(ClonableList):
         returns root sequence of box (r, c)
 
         EXAMPLES:: 
-        sage: D = KoornwinderBoxDiagram([0, 2, 3, -1, 1])
-        sage: D.pretty_print_boxes()
-          |0|_ _    
-          |1|_|_|_  
-         _|2|_|_|_| 
-        |_|3|_      
-          |4|_|    
-
-        sage: D.root_sequence(1, 1)
-        [(0, 1, 0, 0, 1, -2), (0, 1, 0, 0, 0, -3/2)]
-        sage: D.root_sequence(2, 1)
-        [(1, 0, 0, 0, 1, -3), (1, 1, 0, 0, 0, -4), (1, 0, 0, 0, 0, -5/2)]
-        sage: D.root_sequence(4, 1)
-        [(0, 0, 1, 1, 0, -2), (0, 0, 0, 1, 1, -1), (0, 1, 0, 1, 0, -2), (1, 0, 0, 1, 0, -3)
-        (0, 0, 0, 1, 0, -1/2)]
-        sage: D.root_sequence(3, -1)
-        [(0, 0, 1, 0, 0, -1), (0, 0, 1, 0, 1, -1), (0, 1, 1, 0, 0, -2), (1, 0, 1, 0, 0, -3), 
-        (0, 0, 1, 1, 0, -1), (0, 0, 1, 0, 0, -1/2)]
-        sage: D.root_sequence(1, 2)
-        [(0, 1, 0, 0, -1, -1), (0, 1, 0, 0, 0, -1), (0, 1, 0, 0, 1, -1), (1, 1, 0, 0, 0, -3), 
-        (0, 1, 0, 1, 0, -1), (0, 1, 1, 0, 0, -1), (0, 1, 0, 0, 0, -1/2)]
-        sage: D.root_sequence(2, 2)
-        [(1, 0, 0, 0, -1, -2), (1, 0, 0, 0, 0, -2), (1, 0, 0, 0, 1, -2), (1, 0, 0, 1, 0, -2)
-        (1, 0, 1, 0, 0, -2), (1, 1, 0, 0, 0, -2), (1, 0, 0, 0, 0, -3/2)]
-        sage: D.root_sequence(2, 3)
-        [(1, -1, 0, 0, 0, -1), (1, 0, -1, 0, 0, -1), (1, 0, 0, -1, 0, -1), (1, 0, 0, 0, -1, -1)
-        (1, 0, 0, 0, 0, -1), (1, 0, 0, 0, 1, -1), (1, 0, 0, 1, 0, -1), (1, 0, 1, 0, 0, -1)
-        (1, 1, 0, 0, 0, -1), (1, 0, 0, 0, 0, -1/2)]
         """
         self._check_box_call(r, c)
         start = -abs(self.v_mu()[r])
@@ -575,8 +476,6 @@ class AlcoveWalkTableaux(ClonableList):
     sage: AW.permutation_sequence(1, 2)
     [[-4, -2, 1, 5, 3], [-4, -2, 1, 5, 3], [-4, -2, 1, 3, 5], [-4, -2, 3, 1, 5],
     [-4, 3, -2, 1, 5], [3, -4, -2, 1, 5], [3, -4, -2, 1, 5]]
-
-    TODO: implement for alcove walks of type other that box greedy reduced word.
     """
     def __init__(self, mu, folds, z = None):
         if z is None:
@@ -1153,7 +1052,7 @@ class CF_function_space_element(CombinatorialFreeModule.Element):
 
     def divided_difference(self, i):
         r"""
-        Applies ith demazure operator del_i to self, using the `x variables' 
+        Applies the operator del_i to self, using the `x variables' 
         from self.parent().xvars()
         """
         if i < 0 or i > self.parent().n():
@@ -1161,12 +1060,12 @@ class CF_function_space_element(CombinatorialFreeModule.Element):
         out = self.parent().zero()
         for (m, c) in self:
             m = self.parent()._CF_ind(m)
-            out += self._divided_difference_helper(i, c) * self.parent().B(m)
+            out += self._divided_difference_helper(i, c) * self.parent().monomial(m)
         return(out)
 
     def _divided_difference_helper(self, i, f):
         r"""
-        Applies ith demazure operator del_i to polynomial (which must live in parent.base_ring()).
+        Applies the operator del_i to polynomial (which must live in parent.base_ring()).
         """
         xv = self.parent().xvars()
         BR = self.parent().base_ring()
@@ -1175,49 +1074,50 @@ class CF_function_space_element(CombinatorialFreeModule.Element):
         except:
             raise(NotImplementedError(f"Cannot apply divided difference to member of {type(f)}"))
         out = BR(0)
-        if f == BR(1):
+        if f == BR(1) or f in BR.base_ring():
             return(out)
         dd = f.dict()
+        if self.parent().n() == 1:
+            dd = {(i, ) : dd[i] for i in dd}
         if i == 0:
             q = BR(self.parent().q())
             for e in dd:
                 ee = list(e)
-                if ee[0] >= 0:
+                if ee[0] > 0:
                     for a in range(1, ee[0]+1):
                         ep = type(e)([ee[0]-2*a] + ee[1:])
-                        out += dd[e]*q^(a-1)*BR.monomial(ep)
-                else:
-                    for a in range(ee[0], 0):
-                        ep = type(e)([ee[0]-2*a] + ee[1:])
-                        out += dd[e]*q^(a-1)*BR.monomial(ep)
+                        out += dd[e] * q^(a-1) * BR.monomial(ep)
+                elif ee[0] < 0:
+                    for a in range(1, abs(ee[0]) + 1):
+                        ep = type(e)([ee[0] + 2*a - 2] + ee[1:])
+                        out += (-1) * dd[e] * q^(a) * BR.monomial(ep)
         elif i == self.parent().n():
             for e in dd:
                 ee = list(e)
                 if ee[-1] >= 0:
                     for a in range(1, ee[-1]+1):
                         ep = type(e)(ee[:-1] + [ee[-1]-2*a])
-                        out += dd[e] * -1*BR.monomial(ep)
+                        out += (-1) * dd[e] * BR.monomial(ep)
                 else:
                     for a in range(ee[-1], 0):
                         ep = type(e)(ee[:-1] + [ee[-1]-2*a])
-                        out += dd[e] * -1*BR.monomial(ep)
+                        out += (-1) * dd[e] * BR.monomial(ep)
         else:
             for e in dd:
                 ee = list(e)
                 if e[i-1] >= e[i]:
-                    for a in range(1, e[i-1]-e[i]+1):
-                        #print(a)
-                        ep = type(e)(ee[:i-1] + [ee[i-1]-a, ee[i]+a-1] + ee[i+1:])
+                    for a in range(0, e[i-1]-e[i]):
+                        ep = type(e)(ee[:i-1] + [ee[i-1]-1-a, ee[i]+a] + ee[i+1:])
                         out += dd[e] * BR.monomial(ep)
                 elif e[i-1] < e[i]:
-                    for a in range(1, e[i-1]-e[i]+1):
-                        ep = type(e)(ee[:i-1] + [ee[i-1]-a, ee[i]+a-1] + ee[i+1:])
-                        diff = dd[e] * -1 * BR.monomial(ep)
+                    for a in range(0, e[i]-e[i-1]):
+                        ep = type(e)(ee[:i-1] + [ee[i-1]+a, ee[i]-1-a] + ee[i+1:])
+                        out += dd[e] * -1 * BR.monomial(ep)
         return(self.parent().base_ring()(out))
 
     def tau(self, i, mu):
         r"""
-        Applies tau_i operator in Koornwinder creation formula.
+        Applies tau_i operator in Koornwinder creation formula, assuming self has weight mu
         """
         mu = KoornwinderBoxDiagram(mu)
         if i < 0 or i > self.parent().n():
@@ -1248,8 +1148,11 @@ class CF_function_space_element(CombinatorialFreeModule.Element):
         u0 = self.parent().u0()
         ev_mu_Y1 = _get_Y_wt(self.parent().KPR(), [1]+n*[0], mu)
         coeff_2 = t0^(-1/2)*ev_mu_Y1*xv[0]
-        coeff_3 = -t0^(-1/2)* ev_mu_Y1 * (xv[0]^3 + (u0^(-1/2)-u0^(1/2))*q^(1/2)*t0^(1/2)*xv[0]^2 - t0*q*xv[0])
-        return(coeff_1 * self + coeff_2 * self + coeff_3 * self.divided_difference(0))
+        coeff_3 = -1*ev_mu_Y1 * (t0^(-1/2)*xv[0]^3 + (u0^(-1/2)-u0^(1/2))*q^(1/2)*xv[0]^2 - t0^(1/2)*q*xv[0])
+        dup1 = sum([c*self.parent().monomial(m) for (m, c) in self])
+        dup2 = sum([c*self.parent().monomial(m) for (m, c) in self])
+        dup3 = sum([c*self.parent().monomial(m) for (m, c) in self])
+        return(coeff_1 * dup1 + coeff_2 * dup2 + coeff_3 * dup3.divided_difference(0))
 
     def _tau_n_helper(self, mu):
         r"""
@@ -1263,7 +1166,9 @@ class CF_function_space_element(CombinatorialFreeModule.Element):
         tn = self.parent().tn()
         un = self.parent().un()
         coeff_2 = -tn^(-1/2)*(1 - tn^(1/2)*un^(1/2)*xv[-1])*(1 + tn^(1/2)*un^(-1/2)*xv[-1])
-        return(coeff_1 * self + coeff_2 * self.divided_difference(self.parent().n()))
+        dup1 = sum([c*self.parent().monomial(m) for (m, c) in self])
+        dup2 = sum([c*self.parent().monomial(m) for (m, c) in self])
+        return(coeff_1 * dup1 + coeff_2 * dup2.divided_difference(self.parent().n()))
 
     def _tau_i_helper(self, mu, i):
         r"""
@@ -1276,7 +1181,9 @@ class CF_function_space_element(CombinatorialFreeModule.Element):
         xv = self.parent().xvars()
         t = self.parent().t()
         coeff_2 = +(t^(-1/2)*xv[i] - t^(1/2)*xv[i-1])
-        return(coeff_1 * self + coeff_2 * self.divided_difference(i))
+        dup1 = sum([c*self.parent().monomial(m) for (m, c) in self])
+        dup2 = sum([c*self.parent().monomial(m) for (m, c) in self])
+        return(coeff_1 * dup1 + coeff_2 * dup2.divided_difference(i))
 
 
 class CF_function_space(CombinatorialFreeModule):
@@ -1380,14 +1287,11 @@ def AlcoveWalkBoxWeight(AWT, r, c):
     perm_seq = AWT.permutation_sequence(r, c)
     root_seq = AWT.root_sequence(r, c)
     if folding[-1][1]:
-        if len(perm_seq) > 1:
-            last_step = perm_seq[-2]
-        else:
-            last_step = [-1*perm_seq[-1][0]] + perm_seq[-1][1:]
-        if last_step[0] > 0:
-            x_exponent[last_step[0] - 1] += 1
-        elif last_step[0] < 0:
-            x_exponent[-1*last_step[0] - 1] += -1
+        z_of_one = -1*perm_seq[-1][0] # recover z(1) before zero step
+        if z_of_one > 0:
+            x_exponent[z_of_one - 1] += 1
+        elif z_of_one < 0:
+            x_exponent[abs(z_of_one) - 1] += -1
     for i in range(len(folding)):
         fold = folding[i][1]
         step = folding[i][0]
@@ -1400,9 +1304,9 @@ def AlcoveWalkBoxWeight(AWT, r, c):
                 elif z_bi[0] < 0:
                     key = "F+"
             elif step == n:
-                if z_bi[n-1] < 0:
+                if z_bi[-1] < 0:
                    key = "F-"
-                elif z_bi[n-1] > 0:
+                elif z_bi[-1] > 0:
                     key = "F+"
             else:
                 z_bi_i = (lambda x : 2*n+1 + x if x < 0 else x)(z_bi[step-1])
@@ -1456,7 +1360,7 @@ def AlcoveWalkWeight(AWT):
         return(out)
     for (r, c) in bx:
         out *= AlcoveWalkBoxWeight(AWT, r, c)
-    zr = AWT.permutation_sequence(r, c)[-1]
+    zr = AWT.full_permutation_sequence()[-1]
     ls_zr = Weyl_len_s(zr)
     ld_zr = Weyl_len_d(zr)
     out *= t ** ((ls_zr )/2) * tn ** ((ld_zr)/2)
