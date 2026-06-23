@@ -926,6 +926,58 @@ def KoornwinderPolynomialRing(n, ground_ring = None):
     KPR = LaurentPolynomialRing(CoeffRing, [f"x_{i+1}" for i in range(n)])
     return(KPR)
 
+def Laurent_divided_difference(i, f):
+    r"""
+    Applies the operator del_i to Laurent polynomial.
+    """
+    KPR = f.parent()
+    xv = KPR.gens()
+    n = len(xv)
+    coeff_ring = KPR.base_ring()
+    q = coeff_ring.gens()[0]
+    out = KPR(0)
+    if f in coeff_ring:
+        return(out)
+    dd = f.dict()
+    if n == 1:
+        dd = {(i, ) : dd[i] for i in dd}
+    if i == 0:
+        for e in dd:
+            ee = list(e)
+            if ee[0] > 0:
+                for a in range(1, ee[0]+1):
+                    ep = type(e)([ee[0]-2*a] + ee[1:])
+                    out += dd[e] * q^(a-1) * KPR.monomial(ep)
+            elif ee[0] < 0:
+                for a in range(1, abs(ee[0]) + 1):
+                    ep = type(e)([ee[0] + 2*a - 2] + ee[1:])
+                    out += (-1) * dd[e] * q^(a) * KPR.monomial(ep)
+    elif i == n:
+        for e in dd:
+            ee = list(e)
+            if ee[-1] >= 0:
+                for a in range(1, ee[-1]+1):
+                    ep = type(e)(ee[:-1] + [ee[-1]-2*a])
+                    out += (-1) * dd[e] * KPR.monomial(ep)
+            else:
+                for a in range(ee[-1], 0):
+                    ep = type(e)(ee[:-1] + [ee[-1]-2*a])
+                    out += (-1) * dd[e] * KPR.monomial(ep)
+    else:
+        for e in dd:
+            ee = list(e)
+            if e[i-1] >= e[i]:
+                for a in range(0, e[i-1]-e[i]):
+                    ep = type(e)(ee[:i-1] + [ee[i-1]-1-a, ee[i]+a] + ee[i+1:])
+                    out += dd[e] * KPR.monomial(ep)
+            elif e[i-1] < e[i]:
+                for a in range(0, e[i]-e[i-1]):
+                    ep = type(e)(ee[:i-1] + [ee[i-1]+a, ee[i]-1-a] + ee[i+1:])
+                    out += dd[e] * -1 * KPR.monomial(ep)
+    return( KPR(out) )
+
+
+
 def _get_tu_params(KPR, wt):
     r"""
     gets t and u parameters for the coroot wt
@@ -1060,60 +1112,8 @@ class CF_function_space_element(CombinatorialFreeModule.Element):
         out = self.parent().zero()
         for (m, c) in self:
             m = self.parent()._CF_ind(m)
-            out += self._divided_difference_helper(i, c) * self.parent().monomial(m)
+            out += Laurent_divided_difference(i, c) * self.parent().monomial(m)
         return(out)
-
-    def _divided_difference_helper(self, i, f):
-        r"""
-        Applies the operator del_i to polynomial (which must live in parent.base_ring()).
-        """
-        xv = self.parent().xvars()
-        BR = self.parent().base_ring()
-        try:
-            f = BR(f)
-        except:
-            raise(NotImplementedError(f"Cannot apply divided difference to member of {type(f)}"))
-        out = BR(0)
-        if f == BR(1) or f in BR.base_ring():
-            return(out)
-        dd = f.dict()
-        if self.parent().n() == 1:
-            dd = {(i, ) : dd[i] for i in dd}
-        if i == 0:
-            q = BR(self.parent().q())
-            for e in dd:
-                ee = list(e)
-                if ee[0] > 0:
-                    for a in range(1, ee[0]+1):
-                        ep = type(e)([ee[0]-2*a] + ee[1:])
-                        out += dd[e] * q^(a-1) * BR.monomial(ep)
-                elif ee[0] < 0:
-                    for a in range(1, abs(ee[0]) + 1):
-                        ep = type(e)([ee[0] + 2*a - 2] + ee[1:])
-                        out += (-1) * dd[e] * q^(a) * BR.monomial(ep)
-        elif i == self.parent().n():
-            for e in dd:
-                ee = list(e)
-                if ee[-1] >= 0:
-                    for a in range(1, ee[-1]+1):
-                        ep = type(e)(ee[:-1] + [ee[-1]-2*a])
-                        out += (-1) * dd[e] * BR.monomial(ep)
-                else:
-                    for a in range(ee[-1], 0):
-                        ep = type(e)(ee[:-1] + [ee[-1]-2*a])
-                        out += (-1) * dd[e] * BR.monomial(ep)
-        else:
-            for e in dd:
-                ee = list(e)
-                if e[i-1] >= e[i]:
-                    for a in range(0, e[i-1]-e[i]):
-                        ep = type(e)(ee[:i-1] + [ee[i-1]-1-a, ee[i]+a] + ee[i+1:])
-                        out += dd[e] * BR.monomial(ep)
-                elif e[i-1] < e[i]:
-                    for a in range(0, e[i]-e[i-1]):
-                        ep = type(e)(ee[:i-1] + [ee[i-1]+a, ee[i]-1-a] + ee[i+1:])
-                        out += dd[e] * -1 * BR.monomial(ep)
-        return(self.parent().base_ring()(out))
 
     def tau(self, i, mu):
         r"""
@@ -1292,7 +1292,7 @@ def AlcoveWalkBoxWeight(AWT, r, c):
             x_exponent[z_of_one - 1] += 1
         elif z_of_one < 0:
             x_exponent[abs(z_of_one) - 1] += -1
-    for i in range(len(folding)):
+    for i in range(len(folding)): 
         fold = folding[i][1]
         step = folding[i][0]
         if not fold:
