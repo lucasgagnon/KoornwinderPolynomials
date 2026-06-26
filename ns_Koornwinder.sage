@@ -928,7 +928,7 @@ def KoornwinderPolynomialRing(n, ground_ring = None):
 
 def Laurent_divided_difference(i, f):
     r"""
-    Applies the operator del_i to Laurent polynomial.
+    Applies the operator del_i to Laurent polynomial f.
     """
     KPR = f.parent()
     xv = KPR.gens()
@@ -947,22 +947,34 @@ def Laurent_divided_difference(i, f):
             if ee[0] > 0:
                 for a in range(1, ee[0]+1):
                     ep = type(e)([ee[0]-2*a] + ee[1:])
-                    out += dd[e] * q^(a-1) * KPR.monomial(ep)
+                    if n > 1:
+                        out += dd[e] * q^(a-1) * KPR.monomial(ep)
+                    else:
+                        out += dd[e] * q^(a-1) * KPR.monomial(ep[0])
             elif ee[0] < 0:
                 for a in range(1, abs(ee[0]) + 1):
                     ep = type(e)([ee[0] + 2*a - 2] + ee[1:])
-                    out += (-1) * dd[e] * q^(a) * KPR.monomial(ep)
+                    if n > 1:
+                        out += (-1) * dd[e] * q^(a) * KPR.monomial(ep)
+                    else:
+                        out += (-1) * dd[e] * q^(a) * KPR.monomial(ep[0])
     elif i == n:
         for e in dd:
             ee = list(e)
             if ee[-1] >= 0:
                 for a in range(1, ee[-1]+1):
                     ep = type(e)(ee[:-1] + [ee[-1]-2*a])
-                    out += (-1) * dd[e] * KPR.monomial(ep)
+                    if n > 1:
+                        out += (-1) * dd[e] * KPR.monomial(ep)
+                    else:
+                        out += (-1) * dd[e] * KPR.monomial(ep[0])
             else:
                 for a in range(ee[-1], 0):
                     ep = type(e)(ee[:-1] + [ee[-1]-2*a])
-                    out += (-1) * dd[e] * KPR.monomial(ep)
+                    if n > 1:
+                        out += (-1) * dd[e] * KPR.monomial(ep)
+                    else:
+                        out += (-1) * dd[e] * KPR.monomial(ep[0])
     else:
         for e in dd:
             ee = list(e)
@@ -976,28 +988,22 @@ def Laurent_divided_difference(i, f):
                     out += dd[e] * -1 * KPR.monomial(ep)
     return( KPR(out) )
 
-
-
 def _get_tu_params(KPR, wt):
     r"""
     gets t and u parameters for the coroot wt
     """
     scalars = KPR.base_ring().gens()
     if len([i for i in range(len(wt)-1) if wt[i] != 0]) == 2:  
-        #print("(co)Root is in orbit 5")
         sq_t_alpha = scalars[1]
         sq_u_alpha = scalars[1]
     else:
         try:
             Integer(wt[-1])
-            #print("(co)Root is in orbit 1")
             sq_t_alpha = scalars[3]
             sq_u_alpha = scalars[2]
         except: 
-            #print("(co)Root is in orbit 3")
             sq_t_alpha = scalars[5]
             sq_u_alpha = scalars[4]
-    #print(f"returning {(KPR(sq_t_alpha), KPR(sq_u_alpha))}")
     return(KPR(sq_t_alpha), KPR(sq_u_alpha))
 
 def _get_Y_wt(KPR, wt, mu = None):
@@ -1069,6 +1075,49 @@ def Fminus_eval(wt, mu = None):
     KPR = KoornwinderPolynomialRing(n)
     (sq_t_alpha, sq_u_alpha) = _get_tu_params(KPR, wt)
     return( sq_t_alpha^(+1) - C_eval([-x for x in wt], mu) )
+
+
+def Laurent_tau(i, mu, f):
+    r"""
+    Applies \tau_i to elements of KPR, assuming that all Y's can be evaluated at the parameter shape.
+    """
+    mu = KoornwinderBoxDiagram(mu)
+    n = len(mu)
+    KPR = f.parent()
+    xv = KPR.gens()
+    base_ring = KPR.base_ring()
+    q = base_ring.gens()[0]^2
+    t = base_ring.gens()[1]^2
+    t0 = base_ring.gens()[2]^2
+    tn = base_ring.gens()[3]^2
+    u0 = base_ring.gens()[4]^2
+    un = base_ring.gens()[5]^2
+    if i < 0 or i > n:
+        raise(ValueError(f"tau_i for i={i} not implemented (must use i between 0 and {n})"))
+    elif i == 0:
+        alpha0 = coroot(-1, 0, 1/2, n)
+        coeff_1 = Fminus_eval(alpha0, mu = mu)
+        ev_mu_Y1 = _get_Y_wt(KPR, [1]+n*[0], mu)
+        coeff_2 = t0^(-1/2)*ev_mu_Y1*xv[0]
+        coeff_3 = -1*ev_mu_Y1 * (t0^(-1/2)*xv[0]^3 + (u0^(-1/2)-u0^(1/2))*q^(1/2)*xv[0]^2 - t0^(1/2)*q*xv[0])
+        dup1 = sum([c*m for (m, c) in f])
+        dup2 = sum([c*m for (m, c) in f])
+        dup3 = sum([c*m for (m, c) in f])
+        return(coeff_1 * dup1 + coeff_2 * dup2 + coeff_3 * Laurent_divided_difference(0, dup3))
+    elif i == n:
+        alphan = coroot(n, 0, 0, n)
+        coeff_1 = C_eval(alphan, mu = mu)
+        coeff_2 = -tn^(-1/2)*(1 - tn^(1/2)*un^(1/2)*xv[-1])*(1 + tn^(1/2)*un^(-1/2)*xv[-1])
+        dup1 = sum([c*m for (c, m) in f])
+        dup2 = sum([c*m for (c, m) in f])
+        return(coeff_1 * dup1 + coeff_2 * Laurent_divided_difference(n, dup2))
+    else:
+        alphai = coroot(i, -i-1, 0, n)
+        coeff_1 = C_eval(alphai, mu=mu)
+        coeff_2 = +(t^(-1/2)*xv[i] - t^(1/2)*xv[i-1])
+        dup1 = sum([c*m for (c, m) in f])
+        dup2 = sum([c*m for (c, m) in f])
+        return(coeff_1 * dup1 + coeff_2 * Laurent_divided_difference(i, dup2))
 
 
 class CF_function_space_element(CombinatorialFreeModule.Element):
