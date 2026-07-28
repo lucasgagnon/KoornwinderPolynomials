@@ -224,7 +224,7 @@ class KoornwinderBoxDiagram(ClonableList):
         print_string = ""
         for j in range(lm, rm+1):
             ti = transition_intervals[0]
-            if ti[0] <= j and j < ti[1]:
+            if ti[0] <= j and j <= ti[1]:
                 print_string += " _"
             else:
                 print_string += "  "
@@ -290,7 +290,7 @@ class KoornwinderBoxDiagram(ClonableList):
                     else:
                         continue
                 elif i_val > 0:
-                    if abs(c) - 1 <= abs(i_val):
+                    if abs(c) <= abs(i_val):
                         opp_side.append( (i, -c) )
                 elif i < r:
                     if abs(c) - 1 <= abs(i_val):
@@ -300,7 +300,8 @@ class KoornwinderBoxDiagram(ClonableList):
                         same_col.append( (i, c) )
             attack = same_col + list(reversed(opp_side)) + prev_col
         return(attack)
-    
+
+
     def leg_length(self, r, c):
         r"""
         returns the leg length statistic of the box (r, c)
@@ -349,16 +350,6 @@ class KoornwinderBoxDiagram(ClonableList):
         else:
             atk = len(self.attacking_boxes(r, c))
             return([s for s in range(atk+1, self.__len__())] + [s for s in range(self.__len__(), -1, -1)])
-            
-
-    def box_greedy_reduced_word(self):
-        r"""
-        returns box greedy reduced word for self as list
-
-        EXAMPLES:: 
-        """
-        return(list(itertools.chain.from_iterable([self.bgrw_filling(r, c) for (r, c) in self.boxes()])))
-
     def root_sequence(self, r, c):
         r"""
         returns root sequence of box (r, c)
@@ -379,7 +370,6 @@ class KoornwinderBoxDiagram(ClonableList):
                     r_seq.append( (start, -abs(v_mu[aj_r]), (leg + self.leg_length(aj_r, aj_c) + 1)))
                 else:
                     r_seq.append( (start, -abs(v_mu[aj_r]), (leg + self.leg_length(aj_r, aj_c) + 1)))
-            #print(leg + 1/2)
             r_seq.append( (start, 0, (leg + 1/2)) )
             r_seq = [coroot(a, b, K, self.__len__()) for (a, b, K) in r_seq]
             return(r_seq)
@@ -394,6 +384,69 @@ class KoornwinderBoxDiagram(ClonableList):
             r_seq.append( (start, 0, (leg + 1/2)) )
             r_seq = [coroot(a, b, K, self.__len__()) for (a, b, K) in r_seq]
         return(r_seq)
+
+    def compression_section_indices_by_box(self, r, c):
+        r"""
+        returns the maximal partition into compression sections of the box greedy 
+        reduced word filling for the box (r, c), as a list of slice indices.  
+        """
+        self._check_box_call(r, c)
+        attacking_boxes = self.attacking_boxes(r, c)
+        atk = len(attacking_boxes)
+        sections = [0]
+        if c != 1:
+            sections.append(2*(self.__len__() - atk) - 1)
+            shift = 2*(self.__len__() - atk) - 1
+        else:
+            shift = 0
+        for i in range(atk-1):
+            a = attacking_boxes[i]
+            b = attacking_boxes[i+1]
+            if self.leg_length(*a) != 0 or self.leg_length(*b) != 0:
+                sections.append(shift + i + 1)
+        if atk > 0:
+            sections.append(shift + len(attacking_boxes))
+        sections.append(shift + len(attacking_boxes)+1) #account for the zero box
+        return(sections)
+
+
+    def compression_sections_by_box(self, r, c):
+        r"""
+        returns the compression subwords of the portion of the box greedy reduced 
+        word for the box (r, c).  
+        """
+        S = self.compression_section_indices_by_box(r, c)
+        W = self.bgrw_filling(r, c)
+        return([W[S[i]:S[i+1]] for i in range(len(S)-1)])
+
+    def box_greedy_reduced_word(self):
+        r"""
+        returns box greedy reduced word for self as list
+
+        EXAMPLES:: 
+        """
+        return(list(itertools.chain.from_iterable([self.bgrw_filling(r, c) for (r, c) in self.boxes()])))
+
+    def compression_section_indices(self):
+        r"""
+        returns the slice indices for all compression sections in the box greedy reduced word.
+        """
+        compression_sections = [0]
+        shift = 0
+        for (r, c) in self.boxes():
+            csibb = self.compression_section_indices_by_box(r, c)
+            for S in csibb[1:]:
+                compression_sections.append(shift + S)
+            shift += csibb[-1]
+        return(compression_sections)
+
+    def compression_sections(self):
+        r"""
+        returns the compression subwords for the full box greedy reduced word.  
+        """
+        S = self.compression_section_indices()
+        W = self.box_greedy_reduced_word()
+        return([W[S[i]:S[i+1]] for i in range(len(S)-1)])
 
     def box_greedy_root_sequence(self):
         r"""
@@ -536,6 +589,29 @@ class AlcoveWalkTableaux(ClonableList):
         """
         return(self._mu.root_sequence(r, c))
 
+    def _init_set_is_csv(self):
+        r"""
+        Check if self is a compressed set valued tableaux
+        """
+        S = self._mu.compression_section_indices()
+        for i in range(len(S)-1):
+            include = False
+            for j in range(S[i], S[i+1]):
+                fold = self.__getitem__(j)
+                if include and not fold:
+                    self._is_csv = False
+                    return()
+                cancel = fold
+        self._is_csv = True
+        return()
+
+    def is_csv(self):
+        try:
+            return(self._is_csv)
+        except:
+            self._init_set_is_csv()
+            return(self._is_csv)
+
     def _generate_endpoints(self):
         r"""
         Generate (once and for all) the underlying weight for self as KoornwinderBoxDiagram
@@ -601,19 +677,30 @@ class AlcoveWalkTableaux(ClonableList):
                 else:
                     return([(word[j-first], self.__getitem__(j)) for j in range(first, i+1)])
 
-    def pretty_print(self):
+    def pretty_print(self, csv = False):
         r"""
-        Pretty print the argument in an ascii_art style.
+        Pretty print the argument in an ascii_art style.  If csv option is true, prints pipe "|"
+        dividers between compression sections within each box.
         """
         lst = self._mu
         coord_dicts = {}
         for (r, c) in self._mu.boxes():
+            if csv:
+                breaks = self._mu.compression_section_indices_by_box(r, c)
+            else:
+                breaks = []
             word = ""
+            position = 0
             for (letter, fold) in self.folding(r, c):
                 if fold:
-                    word += str(letter) + ", "
+                    word += str(letter)
                 else:
-                    word += "-, "
+                    word += "-"
+                if position + 1 in breaks:
+                    word += " | "
+                else:
+                    word += ", "
+                position += 1
             coord_dicts[(r, c)] = word[:-2]
         mx_ln = {(lambda x : x if x < 0 else x - 1)(c) : max([len(coord_dicts[k]) for k in coord_dicts if k[1] == c]) for (b, c) in coord_dicts.keys()}
         transition_intervals = []
@@ -934,7 +1021,7 @@ def Laurent_divided_difference(i, f):
     xv = KPR.gens()
     n = len(xv)
     coeff_ring = KPR.base_ring()
-    q = coeff_ring.gens()[0]
+    q = coeff_ring.gens()[0]^2
     out = KPR(0)
     if f in coeff_ring:
         return(out)
@@ -944,37 +1031,37 @@ def Laurent_divided_difference(i, f):
     if i == 0:
         for e in dd:
             ee = list(e)
-            if ee[0] > 0:
-                for a in range(1, ee[0]+1):
-                    ep = type(e)([ee[0]-2*a] + ee[1:])
+            if ee[0] >= 0:
+                for a in range(0,ee[0]):
+                    ep = type(e)([ee[0]-2-2*a]+ee[1:])
                     if n > 1:
-                        out += dd[e] * q^(a-1) * KPR.monomial(ep)
+                        out += dd[e] * q^a * KPR.monomial(ep)
                     else:
-                        out += dd[e] * q^(a-1) * KPR.monomial(ep[0])
+                        out += dd[e] * q^a * KPR.monomial(ep[0])
             elif ee[0] < 0:
-                for a in range(1, abs(ee[0]) + 1):
-                    ep = type(e)([ee[0] + 2*a - 2] + ee[1:])
+                for a in range(0,(-1)*ee[0]):
+                    ep = type(e)([ee[0]+2*a]+ee[1:])
                     if n > 1:
-                        out += (-1) * dd[e] * q^(a) * KPR.monomial(ep)
+                        out += (-1) * dd[e] * q^(-a-1) * KPR.monomial(ep)
                     else:
-                        out += (-1) * dd[e] * q^(a) * KPR.monomial(ep[0])
+                        out += (-1) * dd[e] * q^(-a-1) * KPR.monomial(ep[0])
     elif i == n:
         for e in dd:
             ee = list(e)
             if ee[-1] >= 0:
-                for a in range(1, ee[-1]+1):
-                    ep = type(e)(ee[:-1] + [ee[-1]-2*a])
+                for a in range(0, ee[-1]):
+                    ep = type(e)(ee[:-1] + [2*a - ee[-1]])
                     if n > 1:
                         out += (-1) * dd[e] * KPR.monomial(ep)
                     else:
                         out += (-1) * dd[e] * KPR.monomial(ep[0])
             else:
-                for a in range(ee[-1], 0):
-                    ep = type(e)(ee[:-1] + [ee[-1]-2*a])
+                for a in range(0,(-1)*ee[-1]):
+                    ep = type(e)(ee[:-1] + [ee[-1]+2*a])
                     if n > 1:
-                        out += (-1) * dd[e] * KPR.monomial(ep)
+                        out += dd[e] * KPR.monomial(ep)
                     else:
-                        out += (-1) * dd[e] * KPR.monomial(ep[0])
+                        out += dd[e] * KPR.monomial(ep[0])
     else:
         for e in dd:
             ee = list(e)
@@ -992,18 +1079,23 @@ def _get_tu_params(KPR, wt):
     r"""
     gets t and u parameters for the coroot wt
     """
-    scalars = KPR.base_ring().gens()
+    base_ring = KPR.base_ring()
+    sqrt_t = base_ring.gens()[1]
+    sqrt_t0 = base_ring.gens()[2]
+    sqrt_tn = base_ring.gens()[3]
+    sqrt_u0 = base_ring.gens()[4]
+    sqrt_un = base_ring.gens()[5]
     if len([i for i in range(len(wt)-1) if wt[i] != 0]) == 2:  
-        sq_t_alpha = scalars[1]
-        sq_u_alpha = scalars[1]
+        sq_t_alpha = sqrt_t
+        sq_u_alpha = sqrt_t
     else:
         try:
             Integer(wt[-1])
-            sq_t_alpha = scalars[3]
-            sq_u_alpha = scalars[2]
+            sq_t_alpha = sqrt_tn
+            sq_u_alpha = sqrt_t0
         except: 
-            sq_t_alpha = scalars[5]
-            sq_u_alpha = scalars[4]
+            sq_t_alpha = sqrt_un
+            sq_u_alpha = sqrt_u0
     return(KPR(sq_t_alpha), KPR(sq_u_alpha))
 
 def _get_Y_wt(KPR, wt, mu = None):
@@ -1023,7 +1115,6 @@ def _get_Y_wt(KPR, wt, mu = None):
     sqrt_tn = scalars[3]
     Y_wt = KPR.one()
     for i in range(n):
-        KPR.one()
         q_front = sqrt_q^(-2*mu[i])
         t_front = sqrt_t^(-2*v_mu[i])
         if v_mu[i] >= 0:
@@ -1106,6 +1197,7 @@ def Laurent_tau(i, mu, f):
         return(coeff_1 * dup1 + coeff_2 * dup2 + coeff_3 * Laurent_divided_difference(0, dup3))
     elif i == n:
         alphan = coroot(n, 0, 0, n)
+        print(alphan, mu)
         coeff_1 = C_eval(alphan, mu = mu)
         coeff_2 = -tn^(-1/2)*(1 - tn^(1/2)*un^(1/2)*xv[-1])*(1 + tn^(1/2)*un^(-1/2)*xv[-1])
         dup1 = sum([c*m for (c, m) in f])
@@ -1177,7 +1269,6 @@ class CF_function_space_element(CombinatorialFreeModule.Element):
             return(self._tau_n_helper(mu))
         else:
             out = self._tau_i_helper(mu, i)
-            #print(f"actually returning {out}")
             return(out)
 
     def _tau_0_helper(self, mu):
@@ -1310,7 +1401,7 @@ class CF_function_space(CombinatorialFreeModule):
         return(self._scalars.gens()[5]^2)
 
     def xvars(self):
-        """returns set of x varriables"""
+        """returns set of x variables"""
         return(self.base_ring().gens())
 
     def change_ring(self, R):
