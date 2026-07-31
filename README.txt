@@ -4,4 +4,4 @@ All functions are contained in the source file Koornwinder.sage, which depends o
 
 sage: load('Koornwinder.sage')
 
-In addition to documentation, the tutorial PaperCompanion.ipynb walks through the code as it relates to the constructions in "A box-by-box formula for Koornwinder polynomials."
+In addition to documentation, the tutorial PaperCompanion.ipynb walks through the code as it relates to the constructions in the paper.
